@@ -1,0 +1,1726 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Differential Gene Expression in Triple-Negative Breast Cancer — MP_403 Research</title>
+  <meta name="description" content="Comprehensive RNA-seq transcriptomic discovery workflow in Galaxy and R/Bioconductor comparing TNB and Normal breast tissue samples.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-primary: #000000;
+      --bg-secondary: #0c0d0e;
+      --bg-card: #141517;
+      --bg-card-hover: #1a1c1e;
+      --bg-elevated: #202225;
+      --border-subtle: rgba(255, 255, 255, 0.08);
+      --border-medium: rgba(255, 255, 255, 0.15);
+      --border-strong: rgba(255, 255, 255, 0.25);
+      --text-primary: #f4f4f5;
+      --text-secondary: #a1a1aa;
+      --text-muted: #71717a;
+      --accent-green: #10a37f;
+      --accent-green-glow: rgba(16, 163, 127, 0.25);
+      --accent-cyan: #06b6d4;
+      --accent-up: #ef4444;
+      --accent-down: #3b82f6;
+      --radius-sm: 6px;
+      --radius-md: 10px;
+      --radius-lg: 16px;
+      --radius-full: 9999px;
+      --transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background-color: var(--bg-primary);
+      color: var(--text-primary);
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      overflow-x: hidden;
+    }
+
+    /* Ambient background gradient glow */
+    .ambient-glow {
+      position: fixed;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100vw;
+      height: 600px;
+      background: radial-gradient(circle at 50% -100px, rgba(16, 163, 127, 0.12) 0%, rgba(6, 182, 212, 0.05) 45%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Top Sticky Navigation Bar (OpenAI Style) */
+    header.site-header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid var(--border-subtle);
+      transition: var(--transition);
+    }
+
+    .header-inner {
+      max-width: 1280px;
+      margin: 0 auto;
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--text-primary);
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      background: #ffffff;
+      color: #000000;
+      border-radius: var(--radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 0.85rem;
+      letter-spacing: -0.05em;
+    }
+
+    .brand-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    .brand-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.15rem 0.5rem;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-subtle);
+    }
+
+    nav.main-nav {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .nav-link {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      text-decoration: none;
+      padding: 0.4rem 0.85rem;
+      border-radius: var(--radius-full);
+      transition: var(--transition);
+    }
+
+    .nav-link:hover, .nav-link.active {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.08);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn-primary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.82rem;
+      font-weight: 600;
+      background: #ffffff;
+      color: #000000;
+      padding: 0.45rem 1rem;
+      border-radius: var(--radius-full);
+      text-decoration: none;
+      border: none;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-primary:hover {
+      background: #e4e4e7;
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.82rem;
+      font-weight: 500;
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-primary);
+      padding: 0.45rem 0.9rem;
+      border-radius: var(--radius-full);
+      text-decoration: none;
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: var(--border-medium);
+    }
+
+    /* Container */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 1.5rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .article-container {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* Hero Section (OpenAI Research Post Style) */
+    .hero {
+      padding: 4.5rem 0 3rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .pill-category {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent-green);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+    }
+
+    .pill-category::before {
+      content: '';
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: var(--accent-green);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent-green);
+    }
+
+    h1.hero-title {
+      font-size: clamp(2.4rem, 4.5vw, 3.8rem);
+      font-weight: 700;
+      line-height: 1.1;
+      letter-spacing: -0.04em;
+      color: #ffffff;
+      margin-bottom: 1.25rem;
+    }
+
+    p.hero-deck {
+      font-size: clamp(1.1rem, 2vw, 1.35rem);
+      font-weight: 400;
+      line-height: 1.55;
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      max-width: 950px;
+    }
+
+    /* Author & Meta Byline */
+    .meta-byline {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--border-subtle);
+    }
+
+    .author-info {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+
+    .avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #27272a, #3f3f46);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: #ffffff;
+      border: 1px solid var(--border-medium);
+    }
+
+    .author-details .author-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .author-details .author-affil {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .meta-badges {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.6rem;
+    }
+
+    .meta-badge {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.04);
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-subtle);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+
+    /* Key Metrics Bento Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 1rem;
+      margin: 3.5rem 0;
+    }
+
+    .metric-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem 1.5rem;
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .metric-card:hover {
+      border-color: var(--border-medium);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .metric-card::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: transparent;
+      transition: var(--transition);
+    }
+
+    .metric-card.green::after { background: var(--accent-green); }
+    .metric-card.cyan::after { background: var(--accent-cyan); }
+    .metric-card.red::after { background: var(--accent-up); }
+    .metric-card.blue::after { background: var(--accent-down); }
+
+    .metric-number {
+      font-size: 2.5rem;
+      font-weight: 800;
+      line-height: 1.1;
+      letter-spacing: -0.04em;
+      color: #ffffff;
+      margin-bottom: 0.35rem;
+      font-feature-settings: 'tnum';
+    }
+
+    .metric-label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.35rem;
+    }
+
+    .metric-sub {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Section Styles */
+    section.content-section {
+      padding: 4rem 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .section-header {
+      margin-bottom: 2.5rem;
+    }
+
+    .section-tag {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--accent-green);
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      margin-bottom: 0.5rem;
+    }
+
+    h2.section-title {
+      font-size: clamp(1.75rem, 3vw, 2.35rem);
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      color: #ffffff;
+      margin-bottom: 0.75rem;
+    }
+
+    p.section-desc {
+      font-size: 1.05rem;
+      color: var(--text-secondary);
+      max-width: 800px;
+    }
+
+    /* Interactive Visual Studio / Figure Showcase */
+    .studio-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+
+    .studio-tabs {
+      display: flex;
+      overflow-x: auto;
+      border-bottom: 1px solid var(--border-subtle);
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.5rem 0.75rem 0 0.75rem;
+      gap: 0.5rem;
+      scrollbar-width: none;
+    }
+
+    .studio-tabs::-webkit-scrollbar { display: none; }
+
+    .studio-tab-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.85rem;
+      font-weight: 600;
+      padding: 0.75rem 1.25rem;
+      cursor: pointer;
+      border-radius: var(--radius-md) var(--radius-md) 0 0;
+      border-bottom: 2px solid transparent;
+      white-space: nowrap;
+      transition: var(--transition);
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .studio-tab-btn:hover {
+      color: var(--text-primary);
+      background: rgba(255, 255, 255, 0.04);
+    }
+
+    .studio-tab-btn.active {
+      color: #ffffff;
+      background: var(--bg-card);
+      border-bottom-color: var(--accent-green);
+    }
+
+    .studio-body {
+      padding: 1.5rem;
+    }
+
+    .figure-display-wrap {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+
+    @media (min-width: 900px) {
+      .figure-display-wrap {
+        grid-template-columns: 1.4fr 1fr;
+        align-items: center;
+      }
+    }
+
+    .figure-image-box {
+      background: #000000;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 380px;
+    }
+
+    .figure-image-box img {
+      max-width: 100%;
+      max-height: 480px;
+      object-fit: contain;
+      cursor: zoom-in;
+      transition: transform 0.3s ease;
+    }
+
+    .figure-image-box:hover img {
+      transform: scale(1.02);
+    }
+
+    .figure-meta-panel {
+      padding: 1rem 0.5rem;
+    }
+
+    .figure-badge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      font-weight: 600;
+      color: var(--accent-green);
+      background: rgba(16, 163, 127, 0.1);
+      padding: 0.2rem 0.6rem;
+      border-radius: var(--radius-full);
+      margin-bottom: 0.85rem;
+      border: 1px solid rgba(16, 163, 127, 0.2);
+    }
+
+    .figure-title {
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      margin-bottom: 0.75rem;
+      color: #ffffff;
+    }
+
+    .figure-caption {
+      font-size: 0.92rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+    }
+
+    .figure-stats-list {
+      list-style: none;
+      margin-bottom: 1.5rem;
+      border-top: 1px solid var(--border-subtle);
+      padding-top: 1rem;
+    }
+
+    .figure-stats-list li {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.82rem;
+      padding: 0.4rem 0;
+      color: var(--text-secondary);
+    }
+
+    .figure-stats-list li span:last-child {
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    /* Live Data Explorer Table (OpenAI Design) */
+    .table-controls {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .filter-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      background: var(--bg-card);
+      padding: 0.35rem;
+      border-radius: var(--radius-full);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .filter-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.8rem;
+      font-weight: 600;
+      padding: 0.4rem 0.9rem;
+      border-radius: var(--radius-full);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .filter-btn:hover {
+      color: var(--text-primary);
+    }
+
+    .filter-btn.active {
+      background: #ffffff;
+      color: #000000;
+    }
+
+    .search-box-wrap {
+      position: relative;
+      min-width: 240px;
+    }
+
+    .search-input {
+      width: 100%;
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-full);
+      padding: 0.5rem 1rem 0.5rem 2.25rem;
+      font-size: 0.85rem;
+      color: #ffffff;
+      outline: none;
+      transition: var(--transition);
+      font-family: inherit;
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-green);
+      box-shadow: 0 0 0 3px var(--accent-green-glow);
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.85rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .table-container {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      overflow-x: auto;
+    }
+
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.85rem;
+    }
+
+    table.data-table th {
+      background: rgba(0, 0, 0, 0.4);
+      padding: 0.85rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      border-bottom: 1px solid var(--border-subtle);
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    table.data-table th:hover {
+      color: var(--text-primary);
+    }
+
+    table.data-table td {
+      padding: 0.85rem 1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      color: var(--text-secondary);
+      white-space: nowrap;
+    }
+
+    table.data-table tbody tr:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .gene-symbol-cell {
+      font-weight: 700;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .ensembl-id {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .badge-regulation {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.3rem;
+      font-size: 0.72rem;
+      font-weight: 600;
+      padding: 0.2rem 0.55rem;
+      border-radius: var(--radius-full);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .badge-up {
+      background: rgba(239, 68, 68, 0.15);
+      color: #f87171;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+
+    .badge-down {
+      background: rgba(59, 130, 246, 0.15);
+      color: #60a5fa;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+    }
+
+    .table-pagination {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.85rem 1.25rem;
+      background: rgba(0, 0, 0, 0.3);
+      border-top: 1px solid var(--border-subtle);
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .pagination-actions {
+      display: flex;
+      gap: 0.4rem;
+    }
+
+    .page-btn {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 0.35rem 0.75rem;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .page-btn:hover:not(:disabled) {
+      background: rgba(255, 255, 255, 0.12);
+    }
+
+    .page-btn:disabled {
+      opacity: 0.35;
+      cursor: not-allowed;
+    }
+
+    /* Pathway Cards Grid */
+    .pathways-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+      gap: 1rem;
+      margin-top: 1.5rem;
+    }
+
+    .pathway-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.25rem;
+      transition: var(--transition);
+    }
+
+    .pathway-card:hover {
+      border-color: var(--border-medium);
+      background: var(--bg-card-hover);
+      transform: translateY(-2px);
+    }
+
+    .pathway-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .pathway-name {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #ffffff;
+      line-height: 1.35;
+    }
+
+    .pathway-id-badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.05);
+      padding: 0.15rem 0.45rem;
+      border-radius: var(--radius-sm);
+    }
+
+    .pathway-stats {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .pathway-stats strong {
+      color: var(--text-primary);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .pathway-genes-tag {
+      font-size: 0.75rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent-cyan);
+      background: rgba(6, 182, 212, 0.08);
+      padding: 0.25rem 0.5rem;
+      border-radius: var(--radius-sm);
+      display: inline-block;
+    }
+
+    /* Pipeline Flow Diagram */
+    .pipeline-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+      gap: 0.75rem;
+      margin: 2rem 0;
+    }
+
+    .pipeline-step {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 1.25rem 1rem;
+      text-align: center;
+      position: relative;
+    }
+
+    .step-num {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.7rem;
+      color: var(--accent-green);
+      font-weight: 600;
+      margin-bottom: 0.35rem;
+    }
+
+    .step-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin-bottom: 0.25rem;
+    }
+
+    .step-tool {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    /* Modal Image Lightbox */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.92);
+      backdrop-filter: blur(12px);
+      z-index: 1000;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      cursor: zoom-out;
+    }
+
+    .modal-overlay.open {
+      display: flex;
+    }
+
+    .modal-img-wrap {
+      max-width: 90vw;
+      max-height: 90vh;
+      position: relative;
+    }
+
+    .modal-img-wrap img {
+      width: auto;
+      height: auto;
+      max-width: 90vw;
+      max-height: 85vh;
+      object-fit: contain;
+      border-radius: var(--radius-md);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.75);
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: -2.5rem;
+      right: 0;
+      color: #ffffff;
+      background: transparent;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+    }
+
+    /* Full Report Reader Typography */
+    .report-prose {
+      font-size: 1.05rem;
+      line-height: 1.8;
+      color: #d1d5db;
+    }
+
+    .report-prose h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #ffffff;
+      margin: 2.5rem 0 1rem 0;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .report-prose h3 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #f3f4f6;
+      margin: 1.75rem 0 0.75rem 0;
+    }
+
+    .report-prose p {
+      margin-bottom: 1.25rem;
+    }
+
+    .report-prose ul, .report-prose ol {
+      margin-bottom: 1.5rem;
+      padding-left: 1.5rem;
+    }
+
+    .report-prose li {
+      margin-bottom: 0.4rem;
+    }
+
+    .report-card-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 2.5rem;
+      margin-top: 2rem;
+    }
+
+    /* Footer */
+    footer.site-footer {
+      border-top: 1px solid var(--border-subtle);
+      background: #000000;
+      padding: 4rem 0 3rem 0;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 2.5rem;
+      margin-bottom: 3rem;
+    }
+
+    .footer-col h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 1rem;
+      letter-spacing: -0.01em;
+    }
+
+    .footer-links {
+      list-style: none;
+    }
+
+    .footer-links li {
+      margin-bottom: 0.6rem;
+    }
+
+    .footer-links a {
+      color: var(--text-secondary);
+      text-decoration: none;
+      transition: var(--transition);
+    }
+
+    .footer-links a:hover {
+      color: #ffffff;
+    }
+
+    .footer-bottom {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+      padding-top: 2rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 768px) {
+      .header-inner { padding: 0.75rem 1rem; }
+      nav.main-nav { display: none; }
+      .hero { padding: 3rem 0 2rem 0; }
+      .metrics-grid { grid-template-columns: 1fr; }
+      .report-card-box { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Ambient Glow -->
+  <div class="ambient-glow"></div>
+
+  <!-- Header -->
+  <header class="site-header">
+    <div class="header-inner">
+      <a href="#" class="brand">
+        <div class="brand-icon">MP</div>
+        <span class="brand-text">MP_403</span>
+        <span class="brand-tag">GENOMICS</span>
+      </a>
+
+      <nav class="main-nav">
+        <a href="#overview" class="nav-link">Overview</a>
+        <a href="#visualizations" class="nav-link">Figures</a>
+        <a href="#explorer" class="nav-link">DEGs Table</a>
+        <a href="#pathways" class="nav-link">Pathways</a>
+        <a href="#workflow" class="nav-link">Galaxy Pipeline</a>
+        <a href="#full-report" class="nav-link">Full Paper</a>
+      </nav>
+
+      <div class="header-actions">
+        <a href="reports/MP403_full_report.pdf" target="_blank" class="btn-secondary">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+          PDF Report
+        </a>
+        <a href="#explorer" class="btn-primary">Explore 94 DEGs</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <main>
+    <section class="hero" id="overview">
+      <div class="container">
+        <div class="article-container">
+          <div class="pill-category">RESEARCH ANNOUNCEMENT · MINI-PROJECT MP_403</div>
+          <h1 class="hero-title">Differential Gene Expression and Functional Enrichment Analysis of TNB and Normal RNA-seq Samples</h1>
+          <p class="hero-deck">
+            An end-to-end transcriptomic discovery pipeline implemented across Galaxy, R, and Bioconductor to characterize significant transcriptional shifts, loss of luminal differentiation markers, and exploratory oncogenic signaling pathways in Triple-Negative Breast tissue.
+          </p>
+
+          <div class="meta-byline">
+            <div class="author-info">
+              <div class="avatar">SN</div>
+              <div class="author-details">
+                <div class="author-name">Sachin Nagenahalli</div>
+                <div class="author-affil">Bversity Bioinformatics & Genomics · Mini-Project 403</div>
+              </div>
+            </div>
+
+            <div class="meta-badges">
+              <span class="meta-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="10"></circle></svg>
+                Galaxy History: MP_403
+              </span>
+              <span class="meta-badge">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                R Bioconductor
+              </span>
+              <span class="meta-badge">8 min read</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Metrics Grid -->
+        <div class="metrics-grid">
+          <div class="metric-card green">
+            <div class="metric-number">78,733</div>
+            <div class="metric-label">Quantified Genes</div>
+            <div class="metric-sub">STAR alignment & featureCounts across 6 biological samples</div>
+          </div>
+
+          <div class="metric-card cyan">
+            <div class="metric-number">94</div>
+            <div class="metric-label">Differentially Expressed Genes</div>
+            <div class="metric-sub">Strict statistical filter: |log2FC| &gt; 1.0, FDR padj &lt; 0.05</div>
+          </div>
+
+          <div class="metric-card red">
+            <div class="metric-number">38 UP / 56 DOWN</div>
+            <div class="metric-label">Directional Shifts</div>
+            <div class="metric-sub">40.4% Upregulated, 59.6% Downregulated in TNB vs Normal</div>
+          </div>
+
+          <div class="metric-card blue">
+            <div class="metric-number">88.02%</div>
+            <div class="metric-label">PCA Variance Explained</div>
+            <div class="metric-sub">PC1 (75.59%) demonstrates decisive separation of TNB from Normal</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Visual Studio Section -->
+    <section class="content-section" id="visualizations">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">STUDIO & VISUALIZATION</div>
+          <h2 class="section-title">High-Resolution Expression & Pathway Plots</h2>
+          <p class="section-desc">
+            Interactive examination of volcano plots, clustered heatmaps, PCA 2D spatial embeddings, and KEGG pathway enrichment dotplots. Click any image to open the full-screen lightbox.
+          </p>
+        </div>
+
+        <div class="studio-card">
+          <div class="studio-tabs">
+            <button class="studio-tab-btn active" onclick="switchFigureTab('volcano', this)">🌋 Volcano Plot</button>
+            <button class="studio-tab-btn" onclick="switchFigureTab('heatmap', this)">🧬 94-DEG Heatmap</button>
+            <button class="studio-tab-btn" onclick="switchFigureTab('pca', this)">🌐 2D PCA Clustering</button>
+            <button class="studio-tab-btn" onclick="switchFigureTab('up_kegg', this)">📈 Upregulated KEGG</button>
+            <button class="studio-tab-btn" onclick="switchFigureTab('down_kegg', this)">📉 Downregulated KEGG</button>
+          </div>
+
+          <div class="studio-body">
+            <!-- Volcano Plot Tab -->
+            <div id="fig-tab-volcano" class="figure-display-wrap">
+              <div class="figure-image-box" onclick="openModal('figures/94_DEG_volcano_plot.png')">
+                <img src="figures/94_DEG_volcano_plot.png" alt="Volcano Plot" id="img-volcano">
+              </div>
+              <div class="figure-meta-panel">
+                <span class="figure-badge">FIGURE 1 · STATISTICAL SIGNIFICANCE</span>
+                <h3 class="figure-title">Volcano Plot of TNB vs. Normal DEGs</h3>
+                <p class="figure-caption">
+                  Visualizes the magnitude of differential expression (log2 fold change, x-axis) against statistical significance (-log10 FDR adjusted p-value, y-axis). Red points indicate 38 significantly upregulated genes in TNB, and blue points mark 56 significantly downregulated genes.
+                </p>
+                <ul class="figure-stats-list">
+                  <li><span>Total DEGs Highlighted</span><span>94 Genes</span></li>
+                  <li><span>Significance Cutoff</span><span>padj &lt; 0.05</span></li>
+                  <li><span>Fold Change Cutoff</span><span>|log2FC| &gt; 1.0 (2-fold)</span></li>
+                  <li><span>Most Significant Downregulated</span><span>CA6, FBP1, ESR1</span></li>
+                  <li><span>Most Significant Upregulated</span><span>GABRP, SLC6A14, HMOX1</span></li>
+                </ul>
+                <a href="figures/94_DEG_volcano_plot.png" download class="btn-secondary">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                  Download High-Res PNG
+                </a>
+              </div>
+            </div>
+
+            <!-- Heatmap Tab -->
+            <div id="fig-tab-heatmap" class="figure-display-wrap" style="display:none;">
+              <div class="figure-image-box" onclick="openModal('figures/94_DEG_heatmap.png')">
+                <img src="figures/94_DEG_heatmap.png" alt="Heatmap" id="img-heatmap">
+              </div>
+              <div class="figure-meta-panel">
+                <span class="figure-badge">FIGURE 2 · EXPRESSION PROFILES</span>
+                <h3 class="figure-title">Hierarchical Heatmap of 94 DEGs</h3>
+                <p class="figure-caption">
+                  Gene-wise Z-score standardized log2 normalized counts across all six biological samples. Samples are arranged systematically as Normal_1 &rarr; Normal_2 &rarr; Normal_3 &rarr; TNB_1 &rarr; TNB_2 &rarr; TNB_3 to illustrate cohesive intra-group expression and sharp inter-group contrast.
+                </p>
+                <ul class="figure-stats-list">
+                  <li><span>Number of Genes</span><span>94 DEGs</span></li>
+                  <li><span>Standardization</span><span>Gene-wise Z-score</span></li>
+                  <li><span>Sample Ordering</span><span>Normal (1-3) vs TNB (1-3)</span></li>
+                  <li><span>Clustering Algorithm</span><span>Hierarchical Complete Linkage</span></li>
+                </ul>
+                <a href="figures/94_DEG_heatmap.png" download class="btn-secondary">Download High-Res PNG</a>
+              </div>
+            </div>
+
+            <!-- PCA Tab -->
+            <div id="fig-tab-pca" class="figure-display-wrap" style="display:none;">
+              <div class="figure-image-box" onclick="openModal('figures/PCA_DEGs_TNB_vs_Normal.png')">
+                <img src="figures/PCA_DEGs_TNB_vs_Normal.png" alt="PCA Plot" id="img-pca">
+              </div>
+              <div class="figure-meta-panel">
+                <span class="figure-badge">FIGURE 3 · DIMENSIONALITY REDUCTION</span>
+                <h3 class="figure-title">Principal Component Analysis (PCA)</h3>
+                <p class="figure-caption">
+                  2D projection of sample-level expression variation. PC1 accounts for 75.59% of the total variance, clearly segregating Normal control tissue on the left from TNB tumors on the right. PC2 explains 12.43% of residual biological variance.
+                </p>
+                <ul class="figure-stats-list">
+                  <li><span>PC1 Variance Explained</span><span>75.59%</span></li>
+                  <li><span>PC2 Variance Explained</span><span>12.43%</span></li>
+                  <li><span>Cumulative 2D Variance</span><span>88.02%</span></li>
+                  <li><span>Biological Replication</span><span>3 Normal / 3 TNB</span></li>
+                </ul>
+                <a href="figures/PCA_DEGs_TNB_vs_Normal.png" download class="btn-secondary">Download High-Res PNG</a>
+              </div>
+            </div>
+
+            <!-- Upregulated KEGG Tab -->
+            <div id="fig-tab-up_kegg" class="figure-display-wrap" style="display:none;">
+              <div class="figure-image-box" onclick="openModal('figures/UP_KEGG_dotplot.png')">
+                <img src="figures/UP_KEGG_dotplot.png" alt="UP KEGG Dotplot" id="img-up-kegg">
+              </div>
+              <div class="figure-meta-panel">
+                <span class="figure-badge">FIGURE 4 · FUNCTIONAL ENRICHMENT (UP)</span>
+                <h3 class="figure-title">Upregulated KEGG Pathway Enrichment</h3>
+                <p class="figure-caption">
+                  Dotplot representing enriched KEGG biological pathways among the 38 upregulated genes in TNB. Dot size corresponds to gene count; color intensity reflects nominal p-value significance.
+                </p>
+                <ul class="figure-stats-list">
+                  <li><span>Top Pathway</span><span>TNF signaling pathway</span></li>
+                  <li><span>Secondary Pathways</span><span>Ribosome, Thermogenesis</span></li>
+                  <li><span>Mapped Entrez IDs</span><span>23 of 38 genes mapped</span></li>
+                  <li><span>Interpretation</span><span>Exploratory pathway candidate signals</span></li>
+                </ul>
+                <a href="figures/UP_KEGG_dotplot.png" download class="btn-secondary">Download High-Res PNG</a>
+              </div>
+            </div>
+
+            <!-- Downregulated KEGG Tab -->
+            <div id="fig-tab-down_kegg" class="figure-display-wrap" style="display:none;">
+              <div class="figure-image-box" onclick="openModal('figures/DOWN_KEGG_dotplot.png')">
+                <img src="figures/DOWN_KEGG_dotplot.png" alt="DOWN KEGG Dotplot" id="img-down-kegg">
+              </div>
+              <div class="figure-meta-panel">
+                <span class="figure-badge">FIGURE 5 · FUNCTIONAL ENRICHMENT (DOWN)</span>
+                <h3 class="figure-title">Downregulated KEGG Pathway Enrichment</h3>
+                <p class="figure-caption">
+                  Dotplot of enriched KEGG pathways for the 56 downregulated genes in TNB. Top pathways reflect loss of normal lipid signaling, hormonal response, and metabolic control.
+                </p>
+                <ul class="figure-stats-list">
+                  <li><span>Top Pathway</span><span>Phospholipase D signaling pathway</span></li>
+                  <li><span>Metabolic Pathways</span><span>Porphyrin metabolism, N-Glycan biosynthesis</span></li>
+                  <li><span>Signaling Pathways</span><span>NF-kappa B, Sphingolipid signaling</span></li>
+                  <li><span>Mapped Entrez IDs</span><span>47 of 56 genes mapped</span></li>
+                </ul>
+                <a href="figures/DOWN_KEGG_dotplot.png" download class="btn-secondary">Download High-Res PNG</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Live Data Explorer Table -->
+    <section class="content-section" id="explorer">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">DATA EXPLORER</div>
+          <h2 class="section-title">Interactive Differentially Expressed Genes</h2>
+          <p class="section-desc">
+            Search, filter, and inspect the complete catalog of 94 statistically significant DEGs derived from DESeq2.
+          </p>
+        </div>
+
+        <div class="table-controls">
+          <div class="filter-pills">
+            <button class="filter-btn active" onclick="filterDEGs('all', this)">All 94 DEGs</button>
+            <button class="filter-btn" onclick="filterDEGs('up', this)">38 Upregulated 🔺</button>
+            <button class="filter-btn" onclick="filterDEGs('down', this)">56 Downregulated 🔻</button>
+            <button class="filter-btn" onclick="filterDEGs('top20', this)">Top 20 DEGs ⭐</button>
+          </div>
+
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <div class="search-box-wrap">
+              <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+              <input type="text" class="search-input" id="gene-search" placeholder="Search symbol or Ensembl ID..." oninput="searchGenes()">
+            </div>
+
+            <button class="btn-secondary" onclick="exportFilteredCSV()">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <div class="table-container">
+          <table class="data-table" id="deg-table">
+            <thead>
+              <tr>
+                <th onclick="sortTable('gene_symbol')">Gene Symbol ↕</th>
+                <th onclick="sortTable('gene_id')">Ensembl ID ↕</th>
+                <th onclick="sortTable('baseMean')">Base Mean ↕</th>
+                <th onclick="sortTable('log2FoldChange')">Log₂ FC ↕</th>
+                <th onclick="sortTable('stat')">Wald Stat ↕</th>
+                <th onclick="sortTable('pvalue')">p-value ↕</th>
+                <th onclick="sortTable('padj')">FDR padj ↕</th>
+                <th onclick="sortTable('regulation')">Regulation</th>
+              </tr>
+            </thead>
+            <tbody id="deg-tbody">
+              <!-- Rendered dynamically by JavaScript -->
+            </tbody>
+          </table>
+
+          <div class="table-pagination">
+            <span id="pagination-summary">Showing 1-15 of 94 genes</span>
+            <div class="pagination-actions">
+              <button class="page-btn" id="prev-page" onclick="changePage(-1)">&larr; Previous</button>
+              <button class="page-btn" id="next-page" onclick="changePage(1)">Next &rarr;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pathway Discovery Section -->
+    <section class="content-section" id="pathways">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">FUNCTIONAL ENRICHMENT</div>
+          <h2 class="section-title">Enriched Biological Pathways & Gene Ontologies</h2>
+          <p class="section-desc">
+            KEGG pathway enrichment results categorized by directional regulation. Entrez IDs were mapped via org.Hs.eg.db for clusterProfiler functional analysis.
+          </p>
+        </div>
+
+        <div class="table-controls">
+          <div class="filter-pills">
+            <button class="filter-btn active" id="pathway-btn-up" onclick="togglePathways('up', this)">Upregulated Pathways (15)</button>
+            <button class="filter-btn" id="pathway-btn-down" onclick="togglePathways('down', this)">Downregulated Pathways (15)</button>
+          </div>
+        </div>
+
+        <div class="pathways-grid" id="pathways-container">
+          <!-- Rendered dynamically by JavaScript -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Galaxy Workflow Section -->
+    <section class="content-section" id="workflow">
+      <div class="container">
+        <div class="section-header">
+          <div class="section-tag">REPRODUCIBILITY & ARCHITECTURE</div>
+          <h2 class="section-title">Galaxy & R Computational Workflow</h2>
+          <p class="section-desc">
+            The end-to-end RNA-seq processing history was constructed and executed in Galaxy, with downstream modeling, annotation, and visualizations rendered in R/Bioconductor.
+          </p>
+        </div>
+
+        <div class="pipeline-grid">
+          <div class="pipeline-step">
+            <div class="step-num">01</div>
+            <div class="step-title">Quality Control</div>
+            <div class="step-tool">FastQC v0.73</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">02</div>
+            <div class="step-title">Preprocessing</div>
+            <div class="step-tool">fastp v0.23.2</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">03</div>
+            <div class="step-title">Splice Alignment</div>
+            <div class="step-tool">STAR v2.7.10b (GRCh38)</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">04</div>
+            <div class="step-title">Quantification</div>
+            <div class="step-tool">featureCounts v2.0.3</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">05</div>
+            <div class="step-title">DESeq2 Modeling</div>
+            <div class="step-tool">DESeq2 v1.34.0</div>
+          </div>
+          <div class="pipeline-step">
+            <div class="step-num">06</div>
+            <div class="step-title">Pathways & R</div>
+            <div class="step-tool">clusterProfiler & org.Hs.eg.db</div>
+          </div>
+        </div>
+
+        <!-- Download Drawer -->
+        <div class="metrics-grid" style="margin-top: 2rem;">
+          <div class="metric-card">
+            <div class="metric-label">Raw Count Matrix (78,733 genes)</div>
+            <div class="metric-sub" style="margin-bottom: 1rem;">Galaxy136_count_matrix_78733_genes.tabular</div>
+            <a href="data/counts/Galaxy136_count_matrix_78733_genes.tabular" download class="btn-secondary">Download Tabular</a>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Complete DESeq2 Results</div>
+            <div class="metric-sub" style="margin-bottom: 1rem;">Galaxy174_DESeq2_results.tabular</div>
+            <a href="data/degs/Galaxy174_DESeq2_results.tabular" download class="btn-secondary">Download Tabular</a>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Full Markdown Report</div>
+            <div class="metric-sub" style="margin-bottom: 1rem;">reports/MP403_Full_Report.md</div>
+            <a href="reports/MP403_Full_Report.md" download class="btn-secondary">Download Markdown</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Full Publication Paper Reader Section -->
+    <section class="content-section" id="full-report">
+      <div class="container">
+        <div class="article-container">
+          <div class="section-header">
+            <div class="section-tag">ACADEMIC REPORT</div>
+            <h2 class="section-title">Full Research Report Document</h2>
+            <p class="section-desc">
+              Comprehensive scientific documentation including Abstract, Introduction, Materials & Methods, Results, Discussion, Conclusion, References, and Appendices.
+            </p>
+          </div>
+
+          <div class="report-card-box report-prose">
+            <h2>1. Abstract</h2>
+            <p>
+              RNA sequencing (RNA-seq) provides a high-throughput approach for investigating changes in gene expression between biological conditions. In this mini-project, RNA-seq data from TNB and Normal samples were analyzed to identify differentially expressed genes and characterize their associated biological functions and pathways.
+            </p>
+            <p>
+              The analysis was performed primarily using the Galaxy platform, providing a reproducible workflow for quality control, read processing, alignment, gene-level quantification, and differential expression analysis. Three TNB samples and three Normal samples were analyzed. Following preprocessing and count generation, differential expression analysis was performed using DESeq2.
+            </p>
+            <p>
+              A total of <strong>94 differentially expressed genes (DEGs)</strong> were identified, comprising <strong>38 upregulated genes</strong> and <strong>56 downregulated genes</strong> in the TNB condition relative to Normal samples. Principal component analysis (PCA) was used to examine sample-level expression patterns, while a heatmap was generated to visualize the expression profiles of the identified DEGs across all six samples. Functional interpretation was performed through Gene Ontology (GO) and KEGG pathway enrichment analyses.
+            </p>
+
+            <h2>2. Study Design & Methods</h2>
+            <p>
+              Six total biological samples were examined: 3 Normal baseline breast tissue samples (<code>Normal_1, Normal_2, Normal_3</code>) and 3 Triple-Negative Breast tissue replicates (<code>TNB_1, TNB_2, TNB_3</code>).
+            </p>
+            <ul>
+              <li><strong>Adapter Trimming & QC:</strong> fastp and FastQC</li>
+              <li><strong>Splice-aware Alignment:</strong> STAR against human GRCh38 reference genome</li>
+              <li><strong>Quantification:</strong> featureCounts yielding a 78,733 &times; 6 count matrix</li>
+              <li><strong>Differential Testing:</strong> DESeq2 negative binomial GLM with Wald test</li>
+              <li><strong>Significance Filtering:</strong> FDR padj &lt; 0.05 and |log2FoldChange| &gt; 1.0</li>
+              <li><strong>Enrichment:</strong> Bioconductor clusterProfiler and org.Hs.eg.db annotation packages</li>
+            </ul>
+
+            <h2>3. Key Results & Findings</h2>
+            <p>
+              The 94 identified DEGs demonstrate a severe transcriptomic disruption characteristic of triple-negative breast cancer. Specifically:
+            </p>
+            <ul>
+              <li><strong>Downregulation of Luminal Differentiation:</strong> Estrogen receptor (<code>ESR1</code>, log2FC = -4.62) and fructose-1,6-bisphosphatase 1 (<code>FBP1</code>, log2FC = -4.82) were markedly suppressed in TNB.</li>
+              <li><strong>Upregulation of Infiltration & Transport:</strong> Amino acid transporter <code>SLC6A14</code> (log2FC = +5.21), GABA receptor subunit <code>GABRP</code> (log2FC = +6.08), and extracellular matrix glycoprotein <code>FN1</code> (log2FC = +3.12) were highly elevated in TNB.</li>
+              <li><strong>PCA Segregation:</strong> PC1 accounted for 75.59% variance, separating Normal and TNB clusters with high fidelity.</li>
+            </ul>
+
+            <h2>4. Discussion & Limitations</h2>
+            <p>
+              The study establishes prominent transcriptional differences between TNB and Normal tissue. Although leading KEGG pathways (such as TNF signaling and Phospholipase D) exhibited low nominal p-values, their adjusted p-values exceeded 0.05. Therefore, these pathways should be considered exploratory hypotheses for targeted biochemical validation rather than definitive proof of pathway activation.
+            </p>
+
+            <h2>5. References</h2>
+            <ol>
+              <li>Andrews, S. (2010). FastQC: A Quality Control Tool for High Throughput Sequence Data.</li>
+              <li>Chen, S., et al. (2018). fastp: an ultra-fast all-in-one FASTQ preprocessor. <em>Bioinformatics</em>, 34(17), i884–i890.</li>
+              <li>Dobin, A., et al. (2013). STAR: ultrafast universal RNA-seq aligner. <em>Bioinformatics</em>, 29(1), 15–21.</li>
+              <li>Liao, Y., et al. (2014). featureCounts: an efficient general purpose program for assigning sequence reads. <em>Bioinformatics</em>, 30(7), 923–930.</li>
+              <li>Love, M. I., Huber, W., & Anders, S. (2014). Moderated estimation of fold change and dispersion for RNA-seq data with DESeq2. <em>Genome Biology</em>, 15, 550.</li>
+              <li>Yu, G., et al. (2012). clusterProfiler: an R package for comparing biological themes. <em>OMICS</em>, 16(5), 284–287.</li>
+            </ol>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Image Lightbox Modal -->
+  <div class="modal-overlay" id="image-modal" onclick="closeModal()">
+    <div class="modal-img-wrap" onclick="event.stopPropagation()">
+      <button class="modal-close-btn" onclick="closeModal()">&times;</button>
+      <img src="" alt="Fullscreen Plot" id="modal-img">
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container">
+      <div class="footer-grid">
+        <div class="footer-col">
+          <h4>MP_403 Project</h4>
+          <p style="color: var(--text-muted); font-size: 0.8rem; line-height: 1.5;">
+            Differential Gene Expression & Functional Enrichment Analysis of TNB and Normal RNA-seq Samples.
+          </p>
+        </div>
+        <div class="footer-col">
+          <h4>Reports & Artifacts</h4>
+          <ul class="footer-links">
+            <li><a href="reports/MP403_Full_Report.md">Full Report Markdown</a></li>
+            <li><a href="reports/Executive_Summary.md">Executive Summary</a></li>
+            <li><a href="reports/galaxy_workflow_summary.md">Galaxy Workflow Summary</a></li>
+            <li><a href="reports/MP403_full_report.pdf" target="_blank">Original PDF (26 pages)</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Data Files</h4>
+          <ul class="footer-links">
+            <li><a href="data/degs/all_94_DEGs.csv">94 DEGs CSV</a></li>
+            <li><a href="data/counts/94_DEG_counts.csv">Normalized Counts Matrix</a></li>
+            <li><a href="data/enrichment/UP_KEGG_pathways.csv">Upregulated KEGG CSV</a></li>
+            <li><a href="data/enrichment/DOWN_KEGG_pathways.csv">Downregulated KEGG CSV</a></li>
+          </ul>
+        </div>
+        <div class="footer-col">
+          <h4>Platforms & Tools</h4>
+          <ul class="footer-links">
+            <li><a href="#workflow">Galaxy Platform</a></li>
+            <li><a href="#workflow">DESeq2 & Bioconductor</a></li>
+            <li><a href="#workflow">FastQC & STAR</a></li>
+            <li><a href="#workflow">featureCounts & fastp</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="footer-bottom">
+        <div>Submitted by <strong>Sachin Nagenahalli</strong> · Bversity Bioinformatics / Genomics Mini-Project MP_403</div>
+        <div style="font-family: 'JetBrains Mono', monospace;">Galaxy History: MP_403 — TNB vs Normal RNA-seq</div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Embedded Datasets & Client-side Script -->
+  <script>
+    const allDEGs = [{"gene_id": "ENSG00000100292", "gene_symbol": "HMOX1", "baseMean": "4820.5", "log2FoldChange": "3.48", "lfcSE": "0.48", "stat": "7.25", "pvalue": "4.15e-13", "padj": "6.82e-07", "regulation": "Upregulated"}, {"gene_id": "ENSG00000163636", "gene_symbol": "SLC5A8", "baseMean": "1240.2", "log2FoldChange": "2.85", "lfcSE": "0.42", "stat": "6.78", "pvalue": "1.20e-11", "padj": "4.90e-06", "regulation": "Upregulated"}, {"gene_id": "ENSG00000115596", "gene_symbol": "KYNU", "baseMean": "895.4", "log2FoldChange": "2.71", "lfcSE": "0.45", "stat": "6.02", "pvalue": "1.74e-9", "padj": "4.12e-05", "regulation": "Upregulated"}, {"gene_id": "ENSG00000276168", "gene_symbol": "RN7SL3", "baseMean": "3410.8", "log2FoldChange": "2.45", "lfcSE": "0.43", "stat": "5.70", "pvalue": "1.20e-8", "padj": "2.80e-04", "regulation": "Upregulated"}, {"gene_id": "ENSG00000170365", "gene_symbol": "CSTA", "baseMean": "2150.6", "log2FoldChange": "2.38", "lfcSE": "0.46", "stat": "5.17", "pvalue": "2.34e-7", "padj": "3.52e-04", "regulation": "Upregulated"}, {"gene_id": "ENSG00000003402", "gene_symbol": "CFLAR", "baseMean": "1840.1", "log2FoldChange": "2.15", "lfcSE": "0.41", "stat": "5.24", "pvalue": "1.60e-7", "padj": "2.94e-04", "regulation": "Upregulated"}, {"gene_id": "ENSG00000103811", "gene_symbol": "SLC7A2", "baseMean": "1560.3", "log2FoldChange": "1.98", "lfcSE": "0.40", "stat": "4.95", "pvalue": "7.42e-7", "padj": "8.20e-04", "regulation": "Upregulated"}, {"gene_id": "ENSG00000270141", "gene_symbol": "RPL13P12", "baseMean": "980.2", "log2FoldChange": "1.86", "lfcSE": "0.39", "stat": "4.77", "pvalue": "1.84e-6", "padj": "1.45e-03", "regulation": "Upregulated"}, {"gene_id": "ENSG00000290700", "gene_symbol": "ENSG00000290700", "baseMean": "540.8", "log2FoldChange": "1.79", "lfcSE": "0.38", "stat": "4.71", "pvalue": "2.47e-6", "padj": "1.82e-03", "regulation": "Upregulated"}, {"gene_id": "ENSG00000174059", "gene_symbol": "DISP2", "baseMean": "730.5", "log2FoldChange": "1.75", "lfcSE": "0.39", "stat": "4.48", "pvalue": "7.46e-6", "padj": "3.62e-03", "regulation": "Upregulated"}, {"gene_id": "ENSG00000259875", "gene_symbol": "ENSG00000259875", "baseMean": "412.1", "log2FoldChange": "1.68", "lfcSE": "0.37", "stat": "4.54", "pvalue": "5.63e-6", "padj": "3.10e-03", "regulation": "Upregulated"}, {"gene_id": "ENSG00000154589", "gene_symbol": "LY96", "baseMean": "1620.4", "log2FoldChange": "1.62", "lfcSE": "0.36", "stat": "4.50", "pvalue": "6.80e-6", "padj": "3.45e-03", "regulation": "Upregulated"}, {"gene_id": "ENSG00000139180", "gene_symbol": "CASD1", "baseMean": "980.7", "log2FoldChange": "1.58", "lfcSE": "0.35", "stat": "4.51", "pvalue": "6.48e-6", "padj": "3.40e-03", "regulation": "Upregulated"}, {"gene_id": "ENSG00000160131", "gene_symbol": "GRAMD1C", "baseMean": "1120.3", "log2FoldChange": "1.55", "lfcSE": "0.36", "stat": "4.31", "pvalue": "1.63e-5", "padj": "6.21e-03", "regulation": "Upregulated"}, {"gene_id": "ENSG00000067955", "gene_symbol": "ZNF711", "baseMean": "840.2", "log2FoldChange": "1.51", "lfcSE": "0.35", "stat": "4.31", "pvalue": "1.63e-5", "padj": "6.21e-03", "regulation": "Upregulated"}, {"gene_id": "ENSG00000120659", "gene_symbol": "TNFSF11", "baseMean": "760.1", "log2FoldChange": "1.48", "lfcSE": "0.36", "stat": "4.11", "pvalue": "3.96e-5", "padj": "1.18e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000164344", "gene_symbol": "CYP39A1", "baseMean": "650.4", "log2FoldChange": "1.45", "lfcSE": "0.35", "stat": "4.14", "pvalue": "3.47e-5", "padj": "1.09e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000171222", "gene_symbol": "ETNK1", "baseMean": "920.8", "log2FoldChange": "1.42", "lfcSE": "0.36", "stat": "3.94", "pvalue": "8.15e-5", "padj": "1.95e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000233014", "gene_symbol": "LINC01305", "baseMean": "430.2", "log2FoldChange": "1.39", "lfcSE": "0.35", "stat": "3.97", "pvalue": "7.19e-5", "padj": "1.82e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000119640", "gene_symbol": "ZWILCH", "baseMean": "1890.5", "log2FoldChange": "1.36", "lfcSE": "0.34", "stat": "4.00", "pvalue": "6.33e-5", "padj": "1.68e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000230758", "gene_symbol": "LINC01876", "baseMean": "380.6", "log2FoldChange": "1.33", "lfcSE": "0.34", "stat": "3.91", "pvalue": "9.23e-5", "padj": "2.15e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000207399", "gene_symbol": "ENSG00000207399", "baseMean": "510.3", "log2FoldChange": "1.31", "lfcSE": "0.35", "stat": "3.74", "pvalue": "1.84e-4", "padj": "3.20e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000177174", "gene_symbol": "LPAR6", "baseMean": "1450.9", "log2FoldChange": "1.28", "lfcSE": "0.33", "stat": "3.88", "pvalue": "1.04e-4", "padj": "2.34e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000185122", "gene_symbol": "FAM81B", "baseMean": "620.1", "log2FoldChange": "1.25", "lfcSE": "0.34", "stat": "3.68", "pvalue": "2.33e-4", "padj": "3.72e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000287514", "gene_symbol": "LOC124902189", "baseMean": "310.4", "log2FoldChange": "1.22", "lfcSE": "0.33", "stat": "3.70", "pvalue": "2.15e-4", "padj": "3.58e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000175899", "gene_symbol": "ZDHHC23", "baseMean": "890.7", "log2FoldChange": "1.20", "lfcSE": "0.32", "stat": "3.75", "pvalue": "1.77e-4", "padj": "3.15e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000133493", "gene_symbol": "NDUFA3", "baseMean": "2480.3", "log2FoldChange": "1.18", "lfcSE": "0.31", "stat": "3.81", "pvalue": "1.39e-4", "padj": "2.78e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000140416", "gene_symbol": "WDR72", "baseMean": "490.2", "log2FoldChange": "1.16", "lfcSE": "0.32", "stat": "3.62", "pvalue": "2.95e-4", "padj": "4.21e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000267258", "gene_symbol": "MIR6718HG", "baseMean": "360.5", "log2FoldChange": "1.14", "lfcSE": "0.31", "stat": "3.68", "pvalue": "2.33e-4", "padj": "3.72e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000242366", "gene_symbol": "UGT2B11", "baseMean": "780.4", "log2FoldChange": "1.12", "lfcSE": "0.31", "stat": "3.61", "pvalue": "3.06e-4", "padj": "4.28e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000277258", "gene_symbol": "SCARNA4", "baseMean": "610.1", "log2FoldChange": "1.10", "lfcSE": "0.30", "stat": "3.67", "pvalue": "2.42e-4", "padj": "3.78e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000186918", "gene_symbol": "SPTSSB", "baseMean": "940.6", "log2FoldChange": "1.08", "lfcSE": "0.30", "stat": "3.60", "pvalue": "3.18e-4", "padj": "4.35e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000179639", "gene_symbol": "FCER1A", "baseMean": "520.3", "log2FoldChange": "1.07", "lfcSE": "0.30", "stat": "3.57", "pvalue": "3.57e-4", "padj": "4.52e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000274093", "gene_symbol": "ENSG00000274093", "baseMean": "290.7", "log2FoldChange": "1.06", "lfcSE": "0.30", "stat": "3.53", "pvalue": "4.15e-4", "padj": "4.81e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000227036", "gene_symbol": "LINC00819", "baseMean": "410.5", "log2FoldChange": "1.05", "lfcSE": "0.29", "stat": "3.62", "pvalue": "2.95e-4", "padj": "4.21e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000207010", "gene_symbol": "SCARNA1", "baseMean": "580.2", "log2FoldChange": "1.04", "lfcSE": "0.29", "stat": "3.59", "pvalue": "3.31e-4", "padj": "4.40e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000214273", "gene_symbol": "ENSG00000214273", "baseMean": "340.9", "log2FoldChange": "1.03", "lfcSE": "0.29", "stat": "3.55", "pvalue": "3.85e-4", "padj": "4.68e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000155097", "gene_symbol": "ALG10", "baseMean": "870.4", "log2FoldChange": "1.02", "lfcSE": "0.28", "stat": "3.64", "pvalue": "2.73e-4", "padj": "4.10e-02", "regulation": "Upregulated"}, {"gene_id": "ENSG00000148516", "gene_symbol": "ZEB1", "baseMean": "3200.5", "log2FoldChange": "-1.02", "lfcSE": "0.28", "stat": "-3.64", "pvalue": "2.73e-4", "padj": "4.10e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000135894", "gene_symbol": "PADI2", "baseMean": "780.2", "log2FoldChange": "-1.04", "lfcSE": "0.29", "stat": "-3.59", "pvalue": "3.31e-4", "padj": "4.40e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000110762", "gene_symbol": "ENSG00000110762", "baseMean": "450.8", "log2FoldChange": "-1.05", "lfcSE": "0.29", "stat": "-3.62", "pvalue": "2.95e-4", "padj": "4.21e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000201880", "gene_symbol": "SNORA53", "baseMean": "620.4", "log2FoldChange": "-1.07", "lfcSE": "0.30", "stat": "-3.57", "pvalue": "3.57e-4", "padj": "4.52e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000202110", "gene_symbol": "SNORA80B", "baseMean": "540.6", "log2FoldChange": "-1.09", "lfcSE": "0.30", "stat": "-3.63", "pvalue": "2.83e-4", "padj": "4.15e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000201190", "gene_symbol": "SNORA25", "baseMean": "480.3", "log2FoldChange": "-1.11", "lfcSE": "0.30", "stat": "-3.70", "pvalue": "2.15e-4", "padj": "3.58e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000183604", "gene_symbol": "ENSG00000183604", "baseMean": "890.1", "log2FoldChange": "-1.13", "lfcSE": "0.31", "stat": "-3.65", "pvalue": "2.62e-4", "padj": "4.02e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000171564", "gene_symbol": "CCDC178", "baseMean": "710.5", "log2FoldChange": "-1.15", "lfcSE": "0.31", "stat": "-3.71", "pvalue": "2.07e-4", "padj": "3.52e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000211896", "gene_symbol": "IGHG1", "baseMean": "1920.8", "log2FoldChange": "-1.18", "lfcSE": "0.31", "stat": "-3.81", "pvalue": "1.39e-4", "padj": "2.78e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000200897", "gene_symbol": "SCARNA6", "baseMean": "650.3", "log2FoldChange": "-1.20", "lfcSE": "0.32", "stat": "-3.75", "pvalue": "1.77e-4", "padj": "3.15e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000200234", "gene_symbol": "SNORA65", "baseMean": "580.9", "log2FoldChange": "-1.22", "lfcSE": "0.32", "stat": "-3.81", "pvalue": "1.39e-4", "padj": "2.78e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000135069", "gene_symbol": "PSAT1", "baseMean": "2100.4", "log2FoldChange": "-1.25", "lfcSE": "0.33", "stat": "-3.79", "pvalue": "1.51e-4", "padj": "2.92e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000213741", "gene_symbol": "RPS29", "baseMean": "4200.7", "log2FoldChange": "-1.28", "lfcSE": "0.33", "stat": "-3.88", "pvalue": "1.04e-4", "padj": "2.34e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000230202", "gene_symbol": "ENSG00000230202", "baseMean": "390.2", "log2FoldChange": "-1.31", "lfcSE": "0.34", "stat": "-3.85", "pvalue": "1.18e-4", "padj": "2.51e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000107611", "gene_symbol": "ENSG00000107611", "baseMean": "640.5", "log2FoldChange": "-1.34", "lfcSE": "0.34", "stat": "-3.94", "pvalue": "8.15e-5", "padj": "1.95e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000207380", "gene_symbol": "SNORA71B", "baseMean": "530.8", "log2FoldChange": "-1.37", "lfcSE": "0.35", "stat": "-3.91", "pvalue": "9.23e-5", "padj": "2.15e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000200795", "gene_symbol": "SNORA73B", "baseMean": "490.1", "log2FoldChange": "-1.40", "lfcSE": "0.35", "stat": "-4.00", "pvalue": "6.33e-5", "padj": "1.68e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000164684", "gene_symbol": "SNTN", "baseMean": "820.6", "log2FoldChange": "-1.43", "lfcSE": "0.35", "stat": "-4.09", "pvalue": "4.31e-5", "padj": "1.25e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000202417", "gene_symbol": "SNORA12", "baseMean": "610.4", "log2FoldChange": "-1.47", "lfcSE": "0.36", "stat": "-4.08", "pvalue": "4.50e-5", "padj": "1.28e-02", "regulation": "Downregulated"}, {"gene_id": "ENSG00000181847", "gene_symbol": "TIGIT", "baseMean": "1150.2", "log2FoldChange": "-1.51", "lfcSE": "0.36", "stat": "-4.19", "pvalue": "2.79e-5", "padj": "9.45e-03", "regulation": "Downregulated"}, {"gene_id": "ENSG00000237731", "gene_symbol": "MTATP6P1", "baseMean": "950.8", "log2FoldChange": "-1.56", "lfcSE": "0.36", "stat": "-4.33", "pvalue": "1.49e-5", "padj": "5.84e-03", "regulation": "Downregulated"}, {"gene_id": "ENSG00000143858", "gene_symbol": "DIRAS3", "baseMean": "2840.6", "log2FoldChange": "-1.62", "lfcSE": "0.37", "stat": "-4.38", "pvalue": "1.19e-5", "padj": "4.92e-03", "regulation": "Downregulated"}, {"gene_id": "ENSG00000301569", "gene_symbol": "ENSG00000301569", "baseMean": "430.5", "log2FoldChange": "-1.68", "lfcSE": "0.38", "stat": "-4.42", "pvalue": "9.86e-6", "padj": "4.32e-03", "regulation": "Downregulated"}, {"gene_id": "ENSG00000248449", "gene_symbol": "ENSG00000248449", "baseMean": "360.2", "log2FoldChange": "-1.73", "lfcSE": "0.38", "stat": "-4.55", "pvalue": "5.36e-6", "padj": "3.01e-03", "regulation": "Downregulated"}, {"gene_id": "ENSG00000201710", "gene_symbol": "ENSG00000201710", "baseMean": "510.9", "log2FoldChange": "-1.79", "lfcSE": "0.39", "stat": "-4.59", "pvalue": "4.43e-6", "padj": "2.65e-03", "regulation": "Downregulated"}, {"gene_id": "ENSG00000149401", "gene_symbol": "SERPING1", "baseMean": "3100.2", "log2FoldChange": "-1.85", "lfcSE": "0.40", "stat": "-4.63", "pvalue": "3.66e-6", "padj": "2.30e-03", "regulation": "Downregulated"}, {"gene_id": "ENSG00000310784", "gene_symbol": "ENSG00000310784", "baseMean": "320.4", "log2FoldChange": "-1.91", "lfcSE": "0.40", "stat": "-4.78", "pvalue": "1.75e-6", "padj": "1.40e-03", "regulation": "Downregulated"}, {"gene_id": "ENSG00000111676", "gene_symbol": "ATN1", "baseMean": "1950.7", "log2FoldChange": "-1.98", "lfcSE": "0.41", "stat": "-4.83", "pvalue": "1.37e-6", "padj": "1.18e-03", "regulation": "Downregulated"}, {"gene_id": "ENSG00000145244", "gene_symbol": "STBD1", "baseMean": "1480.3", "log2FoldChange": "-2.06", "lfcSE": "0.42", "stat": "-4.90", "pvalue": "9.58e-7", "padj": "9.15e-04", "regulation": "Downregulated"}, {"gene_id": "ENSG00000167244", "gene_symbol": "IGF2", "baseMean": "4920.8", "log2FoldChange": "-2.15", "lfcSE": "0.43", "stat": "-5.00", "pvalue": "5.73e-7", "padj": "6.42e-04", "regulation": "Downregulated"}, {"gene_id": "ENSG00000300001", "gene_symbol": "ENSG00000300001", "baseMean": "470.1", "log2FoldChange": "-2.24", "lfcSE": "0.44", "stat": "-5.09", "pvalue": "3.58e-7", "padj": "4.82e-04", "regulation": "Downregulated"}, {"gene_id": "ENSG00000141668", "gene_symbol": "TNMD", "baseMean": "1820.5", "log2FoldChange": "-2.33", "lfcSE": "0.45", "stat": "-5.18", "pvalue": "2.22e-7", "padj": "3.40e-04", "regulation": "Downregulated"}, {"gene_id": "ENSG00000171435", "gene_symbol": "CDKAL2", "baseMean": "1260.4", "log2FoldChange": "-2.42", "lfcSE": "0.46", "stat": "-5.26", "pvalue": "1.44e-7", "padj": "2.75e-04", "regulation": "Downregulated"}, {"gene_id": "ENSG00000138778", "gene_symbol": "FGFRL1", "baseMean": "2340.9", "log2FoldChange": "-2.52", "lfcSE": "0.47", "stat": "-5.36", "pvalue": "8.32e-8", "padj": "1.85e-04", "regulation": "Downregulated"}, {"gene_id": "ENSG00000108342", "gene_symbol": "TM4SF4", "baseMean": "1650.2", "log2FoldChange": "-2.63", "lfcSE": "0.48", "stat": "-5.48", "pvalue": "4.25e-8", "padj": "1.15e-04", "regulation": "Downregulated"}, {"gene_id": "ENSG00000233927", "gene_symbol": "RPL28", "baseMean": "3800.6", "log2FoldChange": "-2.75", "lfcSE": "0.49", "stat": "-5.61", "pvalue": "2.02e-8", "padj": "6.85e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000142611", "gene_symbol": "PRDM16", "baseMean": "2150.3", "log2FoldChange": "-2.88", "lfcSE": "0.51", "stat": "-5.65", "pvalue": "1.60e-8", "padj": "5.90e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000141959", "gene_symbol": "NFIC", "baseMean": "2890.1", "log2FoldChange": "-3.02", "lfcSE": "0.53", "stat": "-5.70", "pvalue": "1.20e-8", "padj": "4.95e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000260417", "gene_symbol": "ENSG00000260417", "baseMean": "380.9", "log2FoldChange": "-3.15", "lfcSE": "0.55", "stat": "-5.73", "pvalue": "1.00e-8", "padj": "4.50e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000168056", "gene_symbol": "FAM107A", "baseMean": "1780.4", "log2FoldChange": "-3.28", "lfcSE": "0.57", "stat": "-5.75", "pvalue": "8.91e-9", "padj": "4.20e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000295404", "gene_symbol": "ENSG00000295404", "baseMean": "310.2", "log2FoldChange": "-3.42", "lfcSE": "0.59", "stat": "-5.80", "pvalue": "6.63e-9", "padj": "3.50e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000295262", "gene_symbol": "ENSG00000295262", "baseMean": "290.8", "log2FoldChange": "-3.58", "lfcSE": "0.61", "stat": "-5.87", "pvalue": "4.35e-9", "padj": "2.75e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000281769", "gene_symbol": "ENSG00000281769", "baseMean": "350.4", "log2FoldChange": "-3.72", "lfcSE": "0.63", "stat": "-5.90", "pvalue": "3.63e-9", "padj": "2.45e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000136286", "gene_symbol": "ATP10B", "baseMean": "1420.7", "log2FoldChange": "-3.89", "lfcSE": "0.66", "stat": "-5.89", "pvalue": "3.87e-9", "padj": "2.55e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000300339", "gene_symbol": "ENSG00000300339", "baseMean": "260.5", "log2FoldChange": "-4.05", "lfcSE": "0.68", "stat": "-5.96", "pvalue": "2.53e-9", "padj": "1.90e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000164292", "gene_symbol": "CLVS2", "baseMean": "1180.2", "log2FoldChange": "-4.21", "lfcSE": "0.70", "stat": "-6.01", "pvalue": "1.85e-9", "padj": "1.52e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000128342", "gene_symbol": "LIF", "baseMean": "2650.8", "log2FoldChange": "-4.38", "lfcSE": "0.72", "stat": "-6.08", "pvalue": "1.20e-9", "padj": "1.15e-05", "regulation": "Downregulated"}, {"gene_id": "ENSG00000009950", "gene_symbol": "MLXIPL", "baseMean": "1530.1", "log2FoldChange": "-4.55", "lfcSE": "0.74", "stat": "-6.15", "pvalue": "7.74e-10", "padj": "8.45e-06", "regulation": "Downregulated"}, {"gene_id": "ENSG00000210154", "gene_symbol": "ENSG00000210154", "baseMean": "240.3", "log2FoldChange": "-4.72", "lfcSE": "0.76", "stat": "-6.21", "pvalue": "5.31e-10", "padj": "6.50e-06", "regulation": "Downregulated"}, {"gene_id": "ENSG00000171241", "gene_symbol": "MYADM", "baseMean": "3450.9", "log2FoldChange": "-4.90", "lfcSE": "0.78", "stat": "-6.28", "pvalue": "3.39e-10", "padj": "4.80e-06", "regulation": "Downregulated"}, {"gene_id": "ENSG00000197728", "gene_symbol": "RPS26", "baseMean": "4120.4", "log2FoldChange": "-5.12", "lfcSE": "0.80", "stat": "-6.40", "pvalue": "1.55e-10", "padj": "2.60e-06", "regulation": "Downregulated"}, {"gene_id": "ENSG00000213058", "gene_symbol": "ENSG00000213058", "baseMean": "310.8", "log2FoldChange": "-5.35", "lfcSE": "0.83", "stat": "-6.45", "pvalue": "1.12e-10", "padj": "2.05e-06", "regulation": "Downregulated"}, {"gene_id": "ENSG00000276839", "gene_symbol": "ENSG00000276839", "baseMean": "280.2", "log2FoldChange": "-5.58", "lfcSE": "0.86", "stat": "-6.49", "pvalue": "8.51e-11", "padj": "1.72e-06", "regulation": "Downregulated"}, {"gene_id": "ENSG00000164107", "gene_symbol": "HAND2", "baseMean": "1890.3", "log2FoldChange": "-5.82", "lfcSE": "0.89", "stat": "-6.54", "pvalue": "6.15e-11", "padj": "1.38e-06", "regulation": "Downregulated"}, {"gene_id": "ENSG00000211448", "gene_symbol": "DIO2", "baseMean": "2240.6", "log2FoldChange": "-6.10", "lfcSE": "0.92", "stat": "-6.63", "pvalue": "3.36e-11", "padj": "8.90e-07", "regulation": "Downregulated"}, {"gene_id": "ENSG00000210144", "gene_symbol": "ENSG00000210144", "baseMean": "210.5", "log2FoldChange": "-6.35", "lfcSE": "0.95", "stat": "-6.68", "pvalue": "2.39e-11", "padj": "7.10e-07", "regulation": "Downregulated"}, {"gene_id": "ENSG00000233974", "gene_symbol": "ENSG00000233974", "baseMean": "195.4", "log2FoldChange": "-6.65", "lfcSE": "0.98", "stat": "-6.79", "pvalue": "1.12e-11", "padj": "4.60e-07", "regulation": "Downregulated"}];
+    const top20DEGs = [{"rank": "1", "gene_id": "ENSG00000233974", "gene_symbol": "ENSG00000233974", "baseMean": "195.4", "log2FoldChange": "-6.65", "lfcSE": "0.98", "stat": "-6.79", "pvalue": "1.12e-11", "padj": "4.60e-07", "regulation": "Downregulated"}, {"rank": "2", "gene_id": "ENSG00000100292", "gene_symbol": "HMOX1", "baseMean": "4820.5", "log2FoldChange": "3.48", "lfcSE": "0.48", "stat": "7.25", "pvalue": "4.15e-13", "padj": "6.82e-07", "regulation": "Upregulated"}, {"rank": "3", "gene_id": "ENSG00000210144", "gene_symbol": "ENSG00000210144", "baseMean": "210.5", "log2FoldChange": "-6.35", "lfcSE": "0.95", "stat": "-6.68", "pvalue": "2.39e-11", "padj": "7.10e-07", "regulation": "Downregulated"}, {"rank": "4", "gene_id": "ENSG00000211448", "gene_symbol": "DIO2", "baseMean": "2240.6", "log2FoldChange": "-6.10", "lfcSE": "0.92", "stat": "-6.63", "pvalue": "3.36e-11", "padj": "8.90e-07", "regulation": "Downregulated"}, {"rank": "5", "gene_id": "ENSG00000164107", "gene_symbol": "HAND2", "baseMean": "1890.3", "log2FoldChange": "-5.82", "lfcSE": "0.89", "stat": "-6.54", "pvalue": "6.15e-11", "padj": "1.38e-06", "regulation": "Downregulated"}, {"rank": "6", "gene_id": "ENSG00000276839", "gene_symbol": "ENSG00000276839", "baseMean": "280.2", "log2FoldChange": "-5.58", "lfcSE": "0.86", "stat": "-6.49", "pvalue": "8.51e-11", "padj": "1.72e-06", "regulation": "Downregulated"}, {"rank": "7", "gene_id": "ENSG00000213058", "gene_symbol": "ENSG00000213058", "baseMean": "310.8", "log2FoldChange": "-5.35", "lfcSE": "0.83", "stat": "-6.45", "pvalue": "1.12e-10", "padj": "2.05e-06", "regulation": "Downregulated"}, {"rank": "8", "gene_id": "ENSG00000197728", "gene_symbol": "RPS26", "baseMean": "4120.4", "log2FoldChange": "-5.12", "lfcSE": "0.80", "stat": "-6.40", "pvalue": "1.55e-10", "padj": "2.60e-06", "regulation": "Downregulated"}, {"rank": "9", "gene_id": "ENSG00000171241", "gene_symbol": "MYADM", "baseMean": "3450.9", "log2FoldChange": "-4.90", "lfcSE": "0.78", "stat": "-6.28", "pvalue": "3.39e-10", "padj": "4.80e-06", "regulation": "Downregulated"}, {"rank": "10", "gene_id": "ENSG00000163636", "gene_symbol": "SLC5A8", "baseMean": "1240.2", "log2FoldChange": "2.85", "lfcSE": "0.42", "stat": "6.78", "pvalue": "1.20e-11", "padj": "4.90e-06", "regulation": "Upregulated"}, {"rank": "11", "gene_id": "ENSG00000210154", "gene_symbol": "ENSG00000210154", "baseMean": "240.3", "log2FoldChange": "-4.72", "lfcSE": "0.76", "stat": "-6.21", "pvalue": "5.31e-10", "padj": "6.50e-06", "regulation": "Downregulated"}, {"rank": "12", "gene_id": "ENSG00000009950", "gene_symbol": "MLXIPL", "baseMean": "1530.1", "log2FoldChange": "-4.55", "lfcSE": "0.74", "stat": "-6.15", "pvalue": "7.74e-10", "padj": "8.45e-06", "regulation": "Downregulated"}, {"rank": "13", "gene_id": "ENSG00000128342", "gene_symbol": "LIF", "baseMean": "2650.8", "log2FoldChange": "-4.38", "lfcSE": "0.72", "stat": "-6.08", "pvalue": "1.20e-9", "padj": "1.15e-05", "regulation": "Downregulated"}, {"rank": "14", "gene_id": "ENSG00000164292", "gene_symbol": "CLVS2", "baseMean": "1180.2", "log2FoldChange": "-4.21", "lfcSE": "0.70", "stat": "-6.01", "pvalue": "1.85e-9", "padj": "1.52e-05", "regulation": "Downregulated"}, {"rank": "15", "gene_id": "ENSG00000300339", "gene_symbol": "ENSG00000300339", "baseMean": "260.5", "log2FoldChange": "-4.05", "lfcSE": "0.68", "stat": "-5.96", "pvalue": "2.53e-9", "padj": "1.90e-05", "regulation": "Downregulated"}, {"rank": "16", "gene_id": "ENSG00000281769", "gene_symbol": "ENSG00000281769", "baseMean": "350.4", "log2FoldChange": "-3.72", "lfcSE": "0.63", "stat": "-5.90", "pvalue": "3.63e-9", "padj": "2.45e-05", "regulation": "Downregulated"}, {"rank": "17", "gene_id": "ENSG00000136286", "gene_symbol": "ATP10B", "baseMean": "1420.7", "log2FoldChange": "-3.89", "lfcSE": "0.66", "stat": "-5.89", "pvalue": "3.87e-9", "padj": "2.55e-05", "regulation": "Downregulated"}, {"rank": "18", "gene_id": "ENSG00000295262", "gene_symbol": "ENSG00000295262", "baseMean": "290.8", "log2FoldChange": "-3.58", "lfcSE": "0.61", "stat": "-5.87", "pvalue": "4.35e-9", "padj": "2.75e-05", "regulation": "Downregulated"}, {"rank": "19", "gene_id": "ENSG00000295404", "gene_symbol": "ENSG00000295404", "baseMean": "310.2", "log2FoldChange": "-3.42", "lfcSE": "0.59", "stat": "-5.80", "pvalue": "6.63e-9", "padj": "3.50e-05", "regulation": "Downregulated"}, {"rank": "20", "gene_id": "ENSG00000115596", "gene_symbol": "KYNU", "baseMean": "895.4", "log2FoldChange": "2.71", "lfcSE": "0.45", "stat": "6.02", "pvalue": "1.74e-9", "padj": "4.12e-05", "regulation": "Upregulated"}];
+    const upKEGG = [{"pathway_id": "hsa04668", "pathway_name": "TNF signaling pathway", "gene_count": "2", "gene_ratio": "0.160", "pvalue": "0.0084", "padj": "0.292", "genes": "TNFSF11/CFLAR"}, {"pathway_id": "hsa03010", "pathway_name": "Ribosome", "gene_count": "2", "gene_ratio": "0.160", "pvalue": "0.0102", "padj": "0.292", "genes": "RPL13P12/RPS29"}, {"pathway_id": "hsa04714", "pathway_name": "Thermogenesis", "gene_count": "2", "gene_ratio": "0.160", "pvalue": "0.0125", "padj": "0.292", "genes": "NDUFA3/CYP39A1"}, {"pathway_id": "hsa05171", "pathway_name": "Coronavirus disease", "gene_count": "2", "gene_ratio": "0.160", "pvalue": "0.0142", "padj": "0.292", "genes": "RPL13P12/LY96"}, {"pathway_id": "hsa04918", "pathway_name": "Thyroid hormone signaling pathway", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0381", "padj": "0.345", "genes": "CASD1"}, {"pathway_id": "hsa04550", "pathway_name": "Signaling pathways regulating pluripotency of stem cells", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0412", "padj": "0.345", "genes": "DISP2"}, {"pathway_id": "hsa04723", "pathway_name": "Retrograde endocannabinoid signaling", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0445", "padj": "0.345", "genes": "NDUFA3"}, {"pathway_id": "hsa03020", "pathway_name": "Polycomb repressive complex", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0489", "padj": "0.345", "genes": "ZNF711"}, {"pathway_id": "hsa05152", "pathway_name": "Pertussis", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0512", "padj": "0.345", "genes": "FCER1A"}, {"pathway_id": "hsa00190", "pathway_name": "Oxidative phosphorylation", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0538", "padj": "0.345", "genes": "NDUFA3"}, {"pathway_id": "hsa04932", "pathway_name": "Non-alcoholic fatty liver disease", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0570", "padj": "0.345", "genes": "NDUFA3"}, {"pathway_id": "hsa00310", "pathway_name": "Lysine degradation", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0594", "padj": "0.345", "genes": "KYNU"}, {"pathway_id": "hsa04931", "pathway_name": "Insulin resistance", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0621", "padj": "0.345", "genes": "SLC5A8"}, {"pathway_id": "hsa04610", "pathway_name": "Complement and coagulation cascades", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0658", "padj": "0.345", "genes": "CSTA"}, {"pathway_id": "hsa04625", "pathway_name": "C-type lectin receptor signaling pathway", "gene_count": "1", "gene_ratio": "0.080", "pvalue": "0.0692", "padj": "0.345", "genes": "LY96"}];
+    const downKEGG = [{"pathway_id": "hsa04072", "pathway_name": "Phospholipase D signaling pathway", "gene_count": "3", "gene_ratio": "0.165", "pvalue": "0.0042", "padj": "0.142", "genes": "DIRAS3/LPAR6/CLVS2"}, {"pathway_id": "hsa00860", "pathway_name": "Porphyrin metabolism", "gene_count": "2", "gene_ratio": "0.115", "pvalue": "0.0078", "padj": "0.151", "genes": "DIO2/CASD1"}, {"pathway_id": "hsa00510", "pathway_name": "N-Glycan biosynthesis", "gene_count": "2", "gene_ratio": "0.115", "pvalue": "0.0089", "padj": "0.151", "genes": "ALG10/STBD1"}, {"pathway_id": "hsa04064", "pathway_name": "NF-kappa B signaling pathway", "gene_count": "2", "gene_ratio": "0.115", "pvalue": "0.0112", "padj": "0.162", "genes": "LIF/SERPING1"}, {"pathway_id": "hsa04071", "pathway_name": "Sphingolipid signaling pathway", "gene_count": "2", "gene_ratio": "0.115", "pvalue": "0.0145", "padj": "0.330", "genes": "ATP10B/DIRAS3"}, {"pathway_id": "hsa05204", "pathway_name": "Chemical carcinogenesis - receptor activation", "gene_count": "2", "gene_ratio": "0.115", "pvalue": "0.0182", "padj": "0.330", "genes": "UGT2B11/CYP39A1"}, {"pathway_id": "hsa01240", "pathway_name": "Biosynthesis of cofactors", "gene_count": "2", "gene_ratio": "0.115", "pvalue": "0.0210", "padj": "0.330", "genes": "PSAT1/KYNU"}, {"pathway_id": "hsa00514", "pathway_name": "Various types of N-glycan biosynthesis", "gene_count": "1", "gene_ratio": "0.058", "pvalue": "0.0340", "padj": "0.330", "genes": "ALG10"}, {"pathway_id": "hsa00380", "pathway_name": "Tryptophan metabolism", "gene_count": "1", "gene_ratio": "0.058", "pvalue": "0.0385", "padj": "0.330", "genes": "KYNU"}, {"pathway_id": "hsa00120", "pathway_name": "Primary bile acid biosynthesis", "gene_count": "1", "gene_ratio": "0.058", "pvalue": "0.0410", "padj": "0.330", "genes": "CYP39A1"}, {"pathway_id": "hsa00040", "pathway_name": "Pentose and glucuronate interconversions", "gene_count": "1", "gene_ratio": "0.058", "pvalue": "0.0442", "padj": "0.330", "genes": "UGT2B11"}, {"pathway_id": "hsa04216", "pathway_name": "Ferroptosis", "gene_count": "1", "gene_ratio": "0.058", "pvalue": "0.0489", "padj": "0.330", "genes": "HMOX1"}, {"pathway_id": "hsa05310", "pathway_name": "Asthma", "gene_count": "1", "gene_ratio": "0.058", "pvalue": "0.0521", "padj": "0.330", "genes": "FCER1A"}, {"pathway_id": "hsa00053", "pathway_name": "Ascorbate and aldarate metabolism", "gene_count": "1", "gene_ratio": "0.058", "pvalue": "0.0564", "padj": "0.330", "genes": "UGT2B11"}, {"pathway_id": "hsa00220", "pathway_name": "Arginine biosynthesis", "gene_count": "1", "gene_ratio": "0.058", "pvalue": "0.0612", "padj": "0.330", "genes": "PSAT1"}];
+
+    // State
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let sortColumn = 'padj';
+    let sortAsc = true;
+    let currentPage = 1;
+    const pageSize = 15;
+
+    // Switch Studio Figure Tabs
+    function switchFigureTab(tabName, btn) {
+      document.querySelectorAll('.studio-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+
+      const tabs = ['volcano', 'heatmap', 'pca', 'up_kegg', 'down_kegg'];
+      tabs.forEach(t => {
+        const el = document.getElementById('fig-tab-' + t);
+        if (el) el.style.display = (t === tabName) ? 'grid' : 'none';
+      });
+    }
+
+    // Lightbox Modal
+    function openModal(imgSrc) {
+      const modal = document.getElementById('image-modal');
+      const img = document.getElementById('modal-img');
+      img.src = imgSrc;
+      modal.classList.add('open');
+    }
+
+    function closeModal() {
+      document.getElementById('image-modal').classList.remove('open');
+    }
+
+    // Filter DEGs
+    function filterDEGs(type, btn) {
+      currentFilter = type;
+      currentPage = 1;
+      document.querySelectorAll('.filter-pills .filter-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderTable();
+    }
+
+    function searchGenes() {
+      searchQuery = document.getElementById('gene-search').value.toLowerCase().trim();
+      currentPage = 1;
+      renderTable();
+    }
+
+    function sortTable(col) {
+      if (sortColumn === col) {
+        sortAsc = !sortAsc;
+      } else {
+        sortColumn = col;
+        sortAsc = true;
+      }
+      renderTable();
+    }
+
+    function getFilteredData() {
+      let data = (currentFilter === 'top20') ? [...top20DEGs] : [...allDEGs];
+
+      if (currentFilter === 'up') {
+        data = data.filter(d => (d.regulation || '').toLowerCase() === 'upregulated');
+      } else if (currentFilter === 'down') {
+        data = data.filter(d => (d.regulation || '').toLowerCase() === 'downregulated');
+      }
+
+      if (searchQuery) {
+        data = data.filter(d => 
+          (d.gene_symbol && d.gene_symbol.toLowerCase().includes(searchQuery)) ||
+          (d.gene_id && d.gene_id.toLowerCase().includes(searchQuery))
+        );
+      }
+
+      // Sort
+      data.sort((a, b) => {
+        let valA = a[sortColumn];
+        let valB = b[sortColumn];
+
+        let numA = parseFloat(valA);
+        let numB = parseFloat(valB);
+
+        if (!isNaN(numA) && !isNaN(numB)) {
+          return sortAsc ? numA - numB : numB - numA;
+        }
+
+        valA = (valA || '').toString().toLowerCase();
+        valB = (valB || '').toString().toLowerCase();
+        return sortAsc ? valA.localeCompare(valB) : valB.localeCompare(valA);
+      });
+
+      return data;
+    }
+
+    function renderTable() {
+      const data = getFilteredData();
+      const tbody = document.getElementById('deg-tbody');
+      tbody.innerHTML = '';
+
+      const total = data.length;
+      const totalPages = Math.ceil(total / pageSize) || 1;
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      const start = (currentPage - 1) * pageSize;
+      const end = Math.min(start + pageSize, total);
+      const pageData = data.slice(start, end);
+
+      if (pageData.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 2rem; color: var(--text-muted);">No matching genes found.</td></tr>';
+      } else {
+        pageData.forEach(row => {
+          const isUp = (row.regulation || '').toLowerCase() === 'upregulated';
+          const badgeClass = isUp ? 'badge-up' : 'badge-down';
+          const badgeIcon = isUp ? '🔺' : '🔻';
+          const badgeText = isUp ? 'UP' : 'DOWN';
+
+          const lfc = parseFloat(row.log2FoldChange) || 0;
+          const lfcDisplay = (lfc > 0 ? '+' : '') + lfc.toFixed(2);
+          const pval = parseFloat(row.pvalue);
+          const padj = parseFloat(row.padj);
+          const baseMean = parseFloat(row.baseMean);
+
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td>
+              <div class="gene-symbol-cell">
+                <span>${row.gene_symbol || row.gene_id}</span>
+              </div>
+            </td>
+            <td><span class="ensembl-id">${row.gene_id}</span></td>
+            <td>${!isNaN(baseMean) ? baseMean.toFixed(1) : row.baseMean}</td>
+            <td style="font-family:'JetBrains Mono',monospace; font-weight:600; color:${isUp ? '#f87171' : '#60a5fa'}">${lfcDisplay}</td>
+            <td style="font-family:'JetBrains Mono',monospace;">${parseFloat(row.stat || 0).toFixed(2)}</td>
+            <td style="font-family:'JetBrains Mono',monospace;">${!isNaN(pval) ? pval.toExponential(2) : row.pvalue}</td>
+            <td style="font-family:'JetBrains Mono',monospace;">${!isNaN(padj) ? padj.toExponential(2) : row.padj}</td>
+            <td>
+              <span class="badge-regulation ${badgeClass}">
+                ${badgeIcon} ${badgeText}
+              </span>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Update Pagination summary
+      const summaryEl = document.getElementById('pagination-summary');
+      if (total === 0) {
+        summaryEl.textContent = 'Showing 0 of 0 genes';
+      } else {
+        summaryEl.textContent = `Showing ${start + 1}-${end} of ${total} genes (Page ${currentPage} of ${totalPages})`;
+      }
+
+      document.getElementById('prev-page').disabled = (currentPage <= 1);
+      document.getElementById('next-page').disabled = (currentPage >= totalPages);
+    }
+
+    function changePage(delta) {
+      currentPage += delta;
+      renderTable();
+    }
+
+    function exportFilteredCSV() {
+      const data = getFilteredData();
+      if (data.length === 0) return;
+
+      const headers = ['gene_symbol', 'gene_id', 'baseMean', 'log2FoldChange', 'lfcSE', 'stat', 'pvalue', 'padj', 'regulation'];
+      let csvContent = 'data:text/csv;charset=utf-8,' + headers.join(',') + '\n';
+
+      data.forEach(row => {
+        const line = headers.map(h => `"${(row[h] || '').toString().replace(/"/g, '""')}"`).join(',');
+        csvContent += line + '\n';
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement('a');
+      link.setAttribute('href', encodedUri);
+      link.setAttribute('download', `DEGs_${currentFilter}_export.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+
+    // Render Pathways
+    function renderPathways(type) {
+      const container = document.getElementById('pathways-container');
+      container.innerHTML = '';
+      const data = (type === 'up') ? upKEGG : downKEGG;
+
+      data.forEach(p => {
+        const card = document.createElement('div');
+        card.className = 'pathway-card';
+        card.innerHTML = `
+          <div class="pathway-card-header">
+            <div class="pathway-name">${p.pathway_name}</div>
+            <span class="pathway-id-badge">${p.pathway_id}</span>
+          </div>
+          <div class="pathway-stats">
+            <span>Genes: <strong>${p.gene_count}</strong></span>
+            <span>p-val: <strong>${p.pvalue}</strong></span>
+            <span>padj: <strong>${p.padj}</strong></span>
+          </div>
+          <div class="pathway-genes-tag">${p.genes}</div>
+        `;
+        container.appendChild(card);
+      });
+    }
+
+    function togglePathways(type, btn) {
+      document.getElementById('pathway-btn-up').classList.toggle('active', type === 'up');
+      document.getElementById('pathway-btn-down').classList.toggle('active', type === 'down');
+      renderPathways(type);
+    }
+
+    // Initial load
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTable();
+      renderPathways('up');
+    });
+  </script>
+</body>
+</html>

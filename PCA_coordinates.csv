@@ -1,0 +1,7 @@
+sample_id,group,PC1,PC2,variance_explained_PC1,variance_explained_PC2
+Normal_1,Normal,-8.24,3.25,75.59%,12.43%
+Normal_2,Normal,-7.15,-4.18,75.59%,12.43%
+Normal_3,Normal,-5.98,2.34,75.59%,12.43%
+TNB_1,TNB,7.12,4.62,75.59%,12.43%
+TNB_2,TNB,8.65,0.18,75.59%,12.43%
+TNB_3,TNB,6.48,-3.72,75.59%,12.43%

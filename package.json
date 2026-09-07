@@ -1,0 +1,21 @@
+{
+  "name": "mp403-rna-seq-dashboard",
+  "version": "1.0.0",
+  "description": "Differential Gene Expression and Functional Enrichment Analysis of TNB and Normal RNA-seq Samples (MP_403)",
+  "main": "index.html",
+  "scripts": {
+    "dev": "npx -y serve .",
+    "start": "npx -y serve ."
+  },
+  "keywords": [
+    "bioinformatics",
+    "rnaseq",
+    "deseq2",
+    "galaxy",
+    "genomics",
+    "transcriptomics",
+    "triple-negative-breast-cancer"
+  ],
+  "author": "Sachin Nagenahalli",
+  "license": "MIT"
+}
