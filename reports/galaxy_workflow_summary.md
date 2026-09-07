@@ -1,6 +1,7 @@
 # Galaxy Processing Workflow & History Summary
 
 **History:** `MP_403 — TNB vs Normal RNA-seq`  
+**Direct Galaxy History URL:** [https://usegalaxy.org/u/sachinmn989/h/mp-403-tnb-vs-normal-rna-seq](https://usegalaxy.org/u/sachinmn989/h/mp-403-tnb-vs-normal-rna-seq)  
 **Mini-Project:** MP_403  
 
 ---

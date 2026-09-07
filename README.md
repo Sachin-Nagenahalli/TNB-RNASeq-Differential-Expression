@@ -2,7 +2,7 @@
 
 **Submitted by:** Sachin Nagenahalli  
 **Context:** Bversity Bioinformatics / Genomics Project  
-**Primary Platform:** Galaxy  
+**Primary Platform:** Galaxy ([View Galaxy History](https://usegalaxy.org/u/sachinmn989/h/mp-403-tnb-vs-normal-rna-seq))  
 **Downstream Analysis:** R / Bioconductor  
 
 ---

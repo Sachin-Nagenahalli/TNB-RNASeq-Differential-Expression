@@ -15,6 +15,7 @@ This project investigates transcriptional differences between **Triple-Negative 
 
 ### Galaxy Analysis History
 - **History Name:** `MP_403 — TNB vs Normal RNA-seq`
+- **Galaxy History Link:** [https://usegalaxy.org/u/sachinmn989/h/mp-403-tnb-vs-normal-rna-seq](https://usegalaxy.org/u/sachinmn989/h/mp-403-tnb-vs-normal-rna-seq)
 - **Workflow Scope:** Quality control (FastQC), Read preprocessing (fastp), Splice-aware alignment (STAR), Gene-level quantification (featureCounts), and Statistical differential expression (DESeq2).
 
 ---
@@ -245,7 +246,7 @@ This project successfully implemented an end-to-end, reproducible RNA-seq workfl
 
 ### Appendix A — Galaxy Processing History
 - **Project History Name:** `MP_403 — TNB vs Normal RNA-seq`
-- **History Link:** Preserved in Galaxy workspace
+- **Galaxy History Link:** [https://usegalaxy.org/u/sachinmn989/h/mp-403-tnb-vs-normal-rna-seq](https://usegalaxy.org/u/sachinmn989/h/mp-403-tnb-vs-normal-rna-seq)
 
 ### Appendix B — Manifest of Output Datasets
 - `data/counts/94_DEG_counts.csv` — Expression count matrix for 94 DEGs across 6 samples
